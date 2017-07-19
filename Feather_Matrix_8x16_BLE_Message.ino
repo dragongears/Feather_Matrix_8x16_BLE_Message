@@ -1,22 +1,10 @@
 /*********************************************************************
- This is an example for our nRF51822 based Bluefruit LE modules
 
- Pick one up today in the adafruit shop!
-
- Adafruit invests time and resources providing this open source code,
- please support Adafruit and open-source hardware by purchasing
- products from Adafruit!
-
- MIT license, check LICENSE for more information
- All text above, and the splash screen below must be included in
- any redistribution
 *********************************************************************/
 
 #include <Arduino.h>
 #include <SPI.h>
-#if not defined (_VARIANT_ARDUINO_DUE_X_) && not defined (_VARIANT_ARDUINO_ZERO_)
-  #include <SoftwareSerial.h>
-#endif
+#include <SoftwareSerial.h>
 
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack.h"
@@ -106,9 +94,6 @@ void error(const __FlashStringHelper*err) {
 /**************************************************************************/
 void setup(void)
 {
-  while (!Serial);  // required for Flora & Micro
-  delay(500);
-
   Serial.begin(115200);
   Serial.println(F("Adafruit Bluefruit Command <-> Data Mode Example"));
   Serial.println(F("------------------------------------------------"));
@@ -116,17 +101,17 @@ void setup(void)
   /* Initialise the module */
   Serial.print(F("Initialising the Bluefruit LE module: "));
 
-  if ( !ble.begin(VERBOSE_MODE) )
+  if (!ble.begin(VERBOSE_MODE))
   {
     error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
   }
-  Serial.println( F("OK!") );
+  Serial.println(F("OK!"));
 
-  if ( FACTORYRESET_ENABLE )
+  if (FACTORYRESET_ENABLE)
   {
     /* Perform a factory reset to make sure everything is in a known state */
     Serial.println(F("Performing a factory reset: "));
-    if ( ! ble.factoryReset() ){
+    if (! ble.factoryReset()){
       error(F("Couldn't factory reset"));
     }
   }
@@ -144,35 +129,16 @@ void setup(void)
 
   ble.verbose(false);  // debug info is a little annoying after this point!
 
-  /* Wait for connection */
-  while (!ble.isConnected()) {
-      delay(500);
-  }
-
   Serial.println(F("******************************"));
-
-  // LED Activity command is only supported from 0.6.6
-  if ( ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) )
-  {
-    // Change Mode LED Activity
-    Serial.println(F("Change LED activity to " MODE_LED_BEHAVIOUR));
-    ble.sendCommandCheckOK("AT+HWModeLED=" MODE_LED_BEHAVIOUR);
-  }
-
-  // Set module to DATA mode
-  Serial.println( F("Switching to DATA mode!") );
-  ble.setMode(BLUEFRUIT_MODE_DATA);
-
-  Serial.println(F("******************************"));
-
-
-  Serial.println(F("16x8 LED Mini Matrix Test"));
 
   matrix.begin(0x70);  // pass in the address
   matrix.setTextSize(1);
   matrix.setTextWrap(false);  // we don't want text to wrap so it scrolls nicely
   matrix.setTextColor(LED_ON);
   matrix.setRotation(1);
+
+  Serial.println(F("16x8 LED Mini Matrix Setup Complete"));
+
 }
 
 /**************************************************************************/
@@ -182,44 +148,64 @@ void setup(void)
 /**************************************************************************/
 void loop(void)
 {
-  // Check for user input
-//  char n, inputs[BUFSIZE+1];
 
-//  if (Serial.available())
-//  {
-//    n = Serial.readBytes(inputs, BUFSIZE);
-//    inputs[n] = 0;
-//    // Send characters to Bluefruit
-//    Serial.print("Sending: ");
-//    Serial.println(inputs);
-//
-//    // Send input data to host via Bluefruit
-//    ble.print(inputs);
-//  }
+  if (ble.isConnected() && !isConnected) {
+    isConnected = true;
 
-    if (ble.available()) {
-        index = 0;
+    Serial.println(F("******************************"));
+    Serial.println(F("BLE is connected"));
+    Serial.println(F("******************************"));
+
+    strcpy(buffer, "Connected");
+    length = 9;
+
+    // LED Activity command is only supported from 0.6.6
+    if (ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION))
+    {
+      // Change Mode LED Activity
+      Serial.println(F("Change LED activity to " MODE_LED_BEHAVIOUR));
+      ble.sendCommandCheckOK("AT+HWModeLED=" MODE_LED_BEHAVIOUR);
     }
 
-  // Echo received data
-  while (ble.available())
-  {
-    int c = ble.read();
+    // Set module to DATA mode
+    Serial.println( F("Switching to DATA mode!") );
+    ble.setMode(BLUEFRUIT_MODE_DATA);
 
-    buffer[index++] = (char)c;
-
-    Serial.print((char)c);
-
-    // Hex output too, helps w/debugging!
-    Serial.print(" [0x");
-    if (c <= 0xF) Serial.print(F("0"));
-    Serial.print(c, HEX);
-    Serial.print("] ");
   }
 
-  buffer[index] = 0;
-  length = index + 1;
+  if (isConnected) {
+    // Read in new message if available
+    if (ble.available()) {
+      index = 0;
+      Serial.println(F("******************************"));
+      Serial.println(F("Reading in message"));
 
+      while (ble.available())
+      {
+        int c = ble.read();
+
+        if (index < BUFSIZE && c > 16)
+          buffer[index++] = (char)c;
+
+        Serial.print((char)c);
+
+        // Hex output too, helps w/debugging!
+        Serial.print(" [0x");
+        if (c <= 0xF) Serial.print(F("0"));
+        Serial.print(c, HEX);
+        Serial.print("] ");
+      }
+
+      buffer[index] = 0;
+      length = index + 1;
+
+      Serial.print("\n");
+      Serial.println(F("========================="));
+      Serial.println(buffer);
+    }
+  }
+
+  // Display message
   for (int16_t x=CHAR_WIDTH; x>=-(CHAR_WIDTH * length + 1); x--) {
     matrix.clear();
     matrix.setCursor(x,0);
