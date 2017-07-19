@@ -61,6 +61,8 @@
     #define FACTORYRESET_ENABLE         1
     #define MINIMUM_FIRMWARE_VERSION    "0.6.6"
     #define MODE_LED_BEHAVIOUR          "MODE"
+
+    #define CHAR_WIDTH 7
 /*=========================================================================*/
 
 // Create the bluefruit object, either software serial...uncomment these lines
@@ -85,8 +87,10 @@ Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_
 
 Adafruit_8x16minimatrix matrix = Adafruit_8x16minimatrix();
 
-
-
+bool isConnected = false;
+uint8_t index = 0;
+uint8_t length = 5;
+char buffer[BUFSIZE+1] = "Ready";
 
 // A small helper
 void error(const __FlashStringHelper*err) {
@@ -141,7 +145,7 @@ void setup(void)
   ble.verbose(false);  // debug info is a little annoying after this point!
 
   /* Wait for connection */
-  while (! ble.isConnected()) {
+  while (!ble.isConnected()) {
       delay(500);
   }
 
@@ -193,10 +197,16 @@ void loop(void)
 //    ble.print(inputs);
 //  }
 
+    if (ble.available()) {
+        index = 0;
+    }
+
   // Echo received data
-  while ( ble.available() )
+  while (ble.available())
   {
     int c = ble.read();
+
+    buffer[index++] = (char)c;
 
     Serial.print((char)c);
 
@@ -207,10 +217,13 @@ void loop(void)
     Serial.print("] ");
   }
 
-  for (int8_t x=7; x>=-36; x--) {
+  buffer[index] = 0;
+  length = index + 1;
+
+  for (int16_t x=CHAR_WIDTH; x>=-(CHAR_WIDTH * length + 1); x--) {
     matrix.clear();
     matrix.setCursor(x,0);
-    matrix.print("World");
+    matrix.print(buffer);
     matrix.writeDisplay();
     delay(100);
   }
