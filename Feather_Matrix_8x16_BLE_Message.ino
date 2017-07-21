@@ -51,6 +51,7 @@
     #define MODE_LED_BEHAVIOUR          "MODE"
 
     #define CHAR_WIDTH 7
+    #define DISPLAY_WIDTH 16
 /*=========================================================================*/
 
 // Create the bluefruit object, either software serial...uncomment these lines
@@ -206,7 +207,7 @@ void loop(void)
   }
 
   // Display message
-  for (int16_t x=CHAR_WIDTH; x>=-(CHAR_WIDTH * length + 1); x--) {
+  for (int16_t x=DISPLAY_WIDTH; x>=-(CHAR_WIDTH * length + 1); x--) {
     matrix.clear();
     matrix.setCursor(x,0);
     matrix.print(buffer);
