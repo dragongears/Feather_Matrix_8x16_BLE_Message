@@ -1,6 +1,6 @@
 /*********************************************************************
 
-Based off of Adafruit_BluefruitLE_nRF51/examples/bleuart_datamode
+Based on Adafruit_BluefruitLE_nRF51/examples/bleuart_datamode
 https://github.com/adafruit/Adafruit_BluefruitLE_nRF51/tree/master/examples/bleuart_datamode
 
 The MIT License (MIT)
